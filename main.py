@@ -717,12 +717,16 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
 
-
-if __name__ == '__main__':
-    port = int(os.getenv("PORT", 8000))
+if __name__ == "__main__":
+    print("Avvio del server FastAPI...")
+    print("Installare le dipendenze con:")
+    print("pip install fastapi uvicorn pillow reportlab requests PyPDF2")
+    print()
+    
+    # Avvia il server
     uvicorn.run(
-        "main:app",
+        "main:app",  # Assumendo che il file si chiami main.py
         host="0.0.0.0",
-        port=port,
-        # reload only useful during local dev; disable in prod
+        port=8000,
+        log_level="info"
     )

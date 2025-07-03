@@ -533,7 +533,7 @@ async def aggiungi_screenshot(request: Request):
             io.BytesIO(final_pdf_bytes),
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=pdf_with_screenshots_{timestamp.replace(' ', '_').replace(':', '-')}.pdf"
+                "Content-Disposition": f"attachment; filename=pdf_finale.pdf"
             }
         )
 
@@ -729,7 +729,7 @@ async def genera_pdf(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
             headers={
-                "Content-Disposition": f"attachment; filename=generated_pdf_{timestamp.replace(' ', '_').replace(':', '-')}.pdf"
+                "Content-Disposition": f"attachment; filename=selezione_stampa_{timestamp.replace(' ', '_').replace(':', '-')}.pdf"
             }
         )
     else:

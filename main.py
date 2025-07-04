@@ -281,7 +281,8 @@ def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
         
         # Cattura screenshot del sito
         # NOTA: Assicurati che la tua chiave API sia corretta e attiva
-        screenshot_url = f"https://api.site-shot.com/?url={link}&userkey=MAAIEYKBJA7MPB7IUMXSH3QNVX&no_ads=1&delay_time=6000&no_cookie_popup=1&width=960&height=1300"
+        # screenshot_url = f"https://api.site-shot.com/?url={link}&userkey=MAAIEYKBJA7MPB7IUMXSH3QNVX&no_ads=1&delay_time=6000&no_cookie_popup=1&width=960&height=1300"
+        screenshot_url = f"https://api.pikwy.com/?token=d2da7ac0dc62e0830b9a6e020c199be3101072af0ad3a6a6&url={link}&width=960&height=1300&delay=6000"
         print(f"Catturando screenshot da: {link}")
         
         screenshot_response = requests.get(screenshot_url, timeout=60) # Aumentato timeout

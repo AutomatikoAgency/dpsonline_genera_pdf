@@ -16,6 +16,7 @@ import tempfile
 import os
 import requests
 from PyPDF2 import PdfReader, PdfWriter
+from urllib.parse import unquote # <-- MODIFICA: Import aggiunto
 
 app = FastAPI(title="PDF Generator API", version="1.1.0")
 
@@ -259,8 +260,14 @@ def create_pdf_from_images(zip_binary_data: bytes) -> bytes:
 def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
     """
     Aggiunge una pagina con screenshot del link al PDF esistente.
+    Il link viene decodificato e reso cliccabile.
     """
     try:
+        # MODIFICA: Decodifica il link da formato URI a URL standard
+        decoded_link = unquote(link)
+        print(f"Link ricevuto: {link}")
+        print(f"Link decodificato: {decoded_link}")
+
         # Scarica il logo
         logo_bytes = download_logo()
         logo_image = None
@@ -280,12 +287,10 @@ def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
                 logo_image = None
         
         # Cattura screenshot del sito
-        # NOTA: Assicurati che la tua chiave API sia corretta e attiva
-        # screenshot_url = f"https://api.site-shot.com/?url={link}&userkey=MAAIEYKBJA7MPB7IUMXSH3QNVX&no_ads=1&delay_time=6000&no_cookie_popup=1&width=960&height=1300"
-        screenshot_url = f"https://api.pikwy.com/?token=d2da7ac0dc62e0830b9a6e020c199be3101072af0ad3a6a6&url={link}&width=960&height=1300&delay=6000"
-        print(f"Catturando screenshot da: {link}")
+        screenshot_url = f"https://api.pikwy.com/?token=d2da7ac0dc62e0830b9a6e020c199be3101072af0ad3a6a6&url={decoded_link}&width=960&height=1300&delay=6000"
+        print(f"Catturando screenshot da: {decoded_link}")
         
-        screenshot_response = requests.get(screenshot_url, timeout=60) # Aumentato timeout
+        screenshot_response = requests.get(screenshot_url, timeout=60)
         screenshot_response.raise_for_status()
         screenshot_bytes = screenshot_response.content
         print(f"Screenshot catturato: {len(screenshot_bytes)} bytes")
@@ -353,12 +358,29 @@ def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
             except Exception as e:
                 print(f"Errore nell'aggiunta del logo: {e}")
         
-        c.setFont("Helvetica", 10)
-        link_width = c.stringWidth(link, "Helvetica", 10)
+        # --- SEZIONE MODIFICATA PER IL LINK CLICCABILE ---
+        
+        font_name = "Helvetica"
+        font_size = 10
+        link_text = decoded_link
+        
+        c.setFont(font_name, font_size)
+        
+        link_width = c.stringWidth(link_text, font_name, font_size)
         link_x = (page_width - link_width) / 2
         link_y = margin / 2
-        c.drawString(link_x, link_y, link)
-        print(f"Link aggiunto: {link}")
+        
+        # Disegna il testo in blu per farlo sembrare un link
+        c.setFillColorRGB(0, 0, 1)
+        c.drawString(link_x, link_y, link_text)
+        
+        # Crea l'area cliccabile (hotspot)
+        rect = [link_x, link_y, link_x + link_width, link_y + font_size]
+        c.linkURL(decoded_link, rect, relative=1)
+        
+        print(f"Link cliccabile aggiunto: {decoded_link}")
+        
+        # --- FINE SEZIONE MODIFICATA ---
         
         c.save()
         new_page_buffer.seek(0)
@@ -388,14 +410,12 @@ def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
         # Restituisce il PDF originale in caso di errore
         return pdf_bytes
 
-# --- ENDPOINT /aggiungi_screenshot RIMOSSO ---
-
 @app.post("/genera_pdf")
 async def genera_pdf(
     request: Request,
     file: Optional[UploadFile] = File(None),
     zip_data: Optional[str] = Form(None),
-    link: Optional[str] = Header(None) # MODIFICA: Legge il link dall'header
+    link: Optional[str] = Header(None)
 ):
     """
     Endpoint POST per generare PDF.
@@ -437,7 +457,7 @@ async def genera_pdf(
                 print("Body sembra essere un file ZIP!")
                 zip_binary_data = body
             else:
-                 print("Body non è un file ZIP, ignorato.")
+                print("Body non è un file ZIP, ignorato.")
 
 
     print("=" * 60)
@@ -459,7 +479,7 @@ async def genera_pdf(
     print("\n" + "=" * 20 + " FASE 1: CREAZIONE PDF DA IMMAGINI " + "=" * 20)
     pdf_bytes = create_pdf_from_images(zip_binary_data)
     
-    # 2. MODIFICA: AGGIUNTA SCREENSHOT SE IL LINK È PRESENTE
+    # 2. AGGIUNTA SCREENSHOT SE IL LINK È PRESENTE
     if link:
         print("\n" + "=" * 20 + " FASE 2: AGGIUNTA SCREENSHOT " + "="*20)
         # Pulisci e splitta i link, gestendo spazi e virgole multiple
@@ -506,5 +526,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         log_level="info",
-        reload=True # Aggiunto per sviluppo più semplice
+        reload=True
     )

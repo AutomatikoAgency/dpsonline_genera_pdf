@@ -16,7 +16,7 @@ import tempfile
 import os
 import requests
 from PyPDF2 import PdfReader, PdfWriter
-from urllib.parse import unquote # <-- MODIFICA: Import aggiunto
+from urllib.parse import unquote, urlparse # <-- MODIFICA: Aggiunto urlparse
 
 app = FastAPI(title="PDF Generator API", version="1.1.0")
 
@@ -260,10 +260,9 @@ def create_pdf_from_images(zip_binary_data: bytes) -> bytes:
 def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
     """
     Aggiunge una pagina con screenshot del link al PDF esistente.
-    Il link viene decodificato e reso cliccabile.
+    Il testo del link mostra solo il dominio, ma punta all'URL completo.
     """
     try:
-        # MODIFICA: Decodifica il link da formato URI a URL standard
         decoded_link = unquote(link)
         print(f"Link ricevuto: {link}")
         print(f"Link decodificato: {decoded_link}")
@@ -362,23 +361,34 @@ def add_screenshot_to_pdf(pdf_bytes: bytes, link: str) -> bytes:
         
         font_name = "Helvetica"
         font_size = 10
-        link_text = decoded_link
+        
+        # MODIFICA: Estrai lo schema e il dominio per creare il link "pulito" da visualizzare.
+        try:
+            parsed_url = urlparse(decoded_link)
+            # Ricostruisci il link pulito (es. https://www.dominio.com)
+            clean_link_text = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        except Exception:
+            # Se l'URL non è valido, usa comunque il link completo come testo
+            clean_link_text = decoded_link
         
         c.setFont(font_name, font_size)
         
-        link_width = c.stringWidth(link_text, font_name, font_size)
+        # Usa il testo pulito per calcolare la larghezza e la posizione
+        link_width = c.stringWidth(clean_link_text, font_name, font_size)
         link_x = (page_width - link_width) / 2
         link_y = margin / 2
         
-        # Disegna il testo in blu per farlo sembrare un link
+        # Disegna il testo "pulito" in blu per farlo sembrare un link
         c.setFillColorRGB(0, 0, 1)
-        c.drawString(link_x, link_y, link_text)
+        c.drawString(link_x, link_y, clean_link_text)
         
-        # Crea l'area cliccabile (hotspot)
+        # Crea l'area cliccabile (hotspot) sull'area del testo pulito
         rect = [link_x, link_y, link_x + link_width, link_y + font_size]
+        
+        # MODIFICA FONDAMENTALE: L'hotspot punta al link COMPLETO e originale
         c.linkURL(decoded_link, rect, relative=1)
         
-        print(f"Link cliccabile aggiunto: {decoded_link}")
+        print(f"Link cliccabile aggiunto: Testo='{clean_link_text}', Destinazione='{decoded_link}'")
         
         # --- FINE SEZIONE MODIFICATA ---
         
